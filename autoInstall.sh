@@ -50,7 +50,12 @@ function display_progress(){
 
 
 function VLC {
-    echo "Installing VLC" > $OUTPUT
+    echo "Instaling VLC" > $OUTPUT
+    display_output 6 40 "VLC"
+    apt-add-repository ppa:videolan/stable-daily -y
+    apt-get update
+    apt-get install vlc -y
+    echo "Install VLC completed"
     display_output 6 40 "VLC"
 }
 
@@ -61,7 +66,7 @@ function Sublime {
 
 function Chrome {
     echo "Installing Chrome" > $OUTPUT
-    display_output 6 40 "Chrome"
+    display_progress 6 40 80
 }
 
 
