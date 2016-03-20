@@ -16,13 +16,13 @@ TMP=${TMPDIR-/tmp}
     }
 
 # Store menu options selected by the user
-INPUT=/tmp/menu.sh.$$
+INPUT=/$TMP/menu.sh.$$
 
 # Storage file for displaying cal and date command output
-OUTPUT=/tmp/output.sh.$$
+OUTPUT=/$TMP/output.sh.$$
 
-# Trap and delete temp files
-trap "rm $OUTPUT; rm $INPUT; exit" SIGHUP SIGINT SIGTERM
+# Storage file for displaying log
+LOG=$TMP/installer.log.$$
 
 #
 # Display message box
@@ -44,18 +44,24 @@ function display_progress(){
     local u=${1-10}
     local p=${2-41}
     local q=${3-Output}
-    dialog --title "Aguarde..." --gauge "${q}" 10 75
+    local t=${4-percent}
+    dialog --title "Aguarde..." --gauge "${q}" 10 75 "${t}"
 }
 
 
 
 function VLC {
-    echo "Instaling VLC" > $OUTPUT
-    display_output 6 40 "VLC"
-    apt-add-repository ppa:videolan/stable-daily -y
-    apt-get update
-    apt-get install vlc -y
-    echo "Install VLC completed"
+    #echo Installing VLC, please wait" > $OUTPUT
+    #display_output 6 40 VLC"
+    display_progress 6 40 "Adicionando Repositorio" 0
+    apt-add-repository ppa:videolan/stable-daily -y &> $LOG
+    display_progress 6 40 "Atualizando Pacotes" 10
+    apt-get update &> $LOG
+    display_progress 6 40 "Instalando VLC" 40
+    apt-get install vlc -y &> $LOG
+    display_progress 6 40 "Instalando VLC" 100
+    sleep 1
+    echo "Install VLC completed" > $OUTPUT
     display_output 6 40 "VLC"
 }
 
@@ -91,6 +97,27 @@ function installProgramms() {
     done < $OUTPUT
 }
 
+function showLog() {
+    cat $LOG > $OUTPUT
+    display_output 30 80 "LOG"
+}
+
+function autoClean() {
+   display_progress 6 40 "Executando Limpeza automática" 0
+   sleep 1
+   apt-get clean -y &> $LOG
+   display_progress 6 40 "Executando Limpeza automática" 30
+   apt-get autoremove -y &> $LOG
+   display_progress 6 40 "Executando Limpeza automática" 50
+   sudo apt-get autoclean -y &> $LOG
+   display_progress 6 40 "Executando Limpeza automática" 80
+   sudo dpkg --configure -a &> $LOG
+   display_progress 6 40 "Executando Limpeza automática" 100
+   sleep 1
+   echo "Limpeza concluída" > $OUTPUT
+   display_output 10 40 "Limpeza"
+
+}
 #
 # Set infinite loop
 #
@@ -102,11 +129,12 @@ do
 #
 dialog --clear --backtitle "Adriano Righi Auto Installer Script" \
 --title "[ M E N U ]" \
---menu "Selecione o que voce deseja instalar\n
+--menu "Selecione uma opção\n
 \n
 adrianorighi.com" 15 50 4 \
 Installers "Installers" \
 AutoClean "Clean de system" \
+ShowLog "Show the log" \
 Exit "Exit to the shell" 2>"${INPUT}"
 
 menuitem=$(<"${INPUT}")
@@ -116,13 +144,13 @@ menuitem=$(<"${INPUT}")
 case $menuitem in
     AutoClean) autoClean;;
     Installers) installProgramms;;
+    ShowLog) showLog;;
     Exit) break;;
 esac
 
 done
 
 #
-# Delete if temp files found
+# Delete if temp files on exit
 #
-[ -f $OUTPUT ] && rm $OUTPUT
-[ -f $INPUT ] && rm $INPUT
+trap "rm -rf $TMP" EXIT SIGHUP SIGINT SIGTERM
