@@ -21,6 +21,9 @@ INPUT=/$TMP/menu.sh.$$
 # Storage file for displaying cal and date command output
 OUTPUT=/$TMP/output.sh.$$
 
+# Storage file for install sequence
+INSTALL=/$TMP/install.sh.$$
+
 # Storage file for displaying log
 LOG=$TMP/installer.log.$$
 
@@ -51,14 +54,14 @@ function display_progress(){
 
 
 function VLC {
-    #echo Installing VLC, please wait" > $OUTPUT
-    #display_output 6 40 VLC"
-    display_progress 6 40 "Adicionando Repositorio" 0
-    apt-add-repository ppa:videolan/stable-daily -y &> $LOG
+    # echo "Installing VLC, please wait" > $OUTPUT
+    # display_output 6 40 "VLC"
+    display_progress 6 40 "Adicionando Repositorio VLC" 0
+    sudo apt-add-repository ppa:videolan/stable-daily -y &> $LOG
     display_progress 6 40 "Atualizando Pacotes" 10
-    apt-get update &> $LOG
+    sudo apt-get update &> $LOG
     display_progress 6 40 "Instalando VLC" 40
-    apt-get install vlc -y &> $LOG
+    sudo apt-get install vlc -y &> $LOG
     display_progress 6 40 "Instalando VLC" 100
     sleep 1
     echo "Install VLC completed" > $OUTPUT
@@ -66,21 +69,122 @@ function VLC {
 }
 
 function Sublime {
-    echo "Installing Sublime" > $OUTPUT
-    display_output 6 40 "Sublime"
+    sudo add-apt-repository ppa:webupd8team/sublime-text-3 -y
+    sudo apt-get update
+    sudo apt-get install sublime-text-installer
+}
+
+function Atom {
+    sudo add-apt-repository ppa:webupd8team/atom -y
+    sudo apt-get update
+    sudo apt-get install atom -y
 }
 
 function Chrome {
     echo "Installing Chrome" > $OUTPUT
-    display_progress 6 40 80
+    display_output 6 40 "Chrome"
+    cd $TMP
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    sudo dpkg -i google-chrome-stable_current_amd64.deb
+    sudo apt-get -f install
 }
 
+function Chromium {
+    sudo apt-get install chromium-browser -y
+}
+
+function FileZilla {
+    sudo add-apt-repository ppa:n-muench/programs-ppa -y
+    sudo apt-get update
+    sudo apt-get install filezilla -y
+}
+
+function WorkBench {
+    cd $TMP
+    wget https://dev.mysql.com/get/Downloads/MySQLGUITools/mysql-workbench-community-6.3.6-1ubu1510-amd64.deb
+    sudo dpkg -i google-chrome-stable_current_amd64.deb
+    sudo apt-get -f install
+}
+
+function Tomahawk {
+    echo "Installing Tomahawk" > $OUTPUT
+    display_output 6 40 "Tomahawk"
+	# sudo add-apt-repository ppa:tomahawk/ppa
+	# sudo apt-get update
+	# sudo apt-get install tomahawk
+}
+
+function Php7 {
+    sudo add-apt-repository ppa:ondrej/php -y
+    sudo apt-get update
+    sudo apt-get install php7.0 php7.0-fpm -y
+    sudo apt-get install php7.0-cli php7.0-mysql php7.0-curl php-memcached php7.0-dev php7.0-mcrypt -y
+    sudo phpenmod mcrypt
+    sudo service php7.0-fpm restart
+}
+
+function qBitTorrent {
+    sudo add-apt-repository ppa:qbittorrent-team/qbittorrent-stable -y
+    sudo apt-get update
+    sudo apt-get install qbittorrent
+}
+
+function VirtualBox {
+    sudo apt-get install dkms -y
+    cd $TEMP
+    wget -q https://www.virtualbox.org/download/oracle_vbox.asc -O- | sudo apt-key add -
+    sudo apt-get update
+    sudo apt-get install virtualbox-5.0
+}
+
+function Kodi {
+    sudo add-apt-repository ppa:team-xbmc/ppa -y
+    sudo apt-get update
+    sudo apt-get install kodi -y
+    sudo apt-get install --install-suggests kodi
+}
+
+function Flash {
+    sudo add-apt-repository -r ppa:mqchael/pipelight -y
+    sudo add-apt-repository -r ppa:ehoover/compholio -y
+    sudo apt-get update
+    sudo apt-get install --install-recommends pipelight-multi
+    sudo pipelight-plugin --update
+    sudo pipelight-plugin --enable flash
+    sudo pipelight-plugin --enable widevine
+    sudo pipelight-plugin --enable silverlight
+    sudo pipelight-plugin --update
+    sudo pipelight-plugin --create-mozilla-plugins
+}
+
+function Skype {
+    sudo add-apt-repository "deb http://archive.canonical.com/ $(lsb_release -sc) partner" -y
+    sudo apt-get update
+    sudo apt-get install skype
+    sudo apt-get -f install
+}
+
+function AfterInstall {
+    sudo add-apt-repository ppa:thefanclub/ubuntu-after-install -y
+    sudo apt-get update
+    sudo apt-get install ubuntu-after-install
+}
+
+function restrictedExtras {
+    sudo apt install ubuntu-restricted-extras -y
+}
+
+function unityTweakTool {
+    sudo apt install unity-tweak-tool -y
+}
 
 function installProgramms() {
     whiptail --title "Install your programs" --checklist --separate-output "Choose programs to install:" 20 78 15 \
     "1" "VLC" off \
     "2" "Sublime Text 3" off \
-    "3" "Google Chrome" off 2> $OUTPUT
+    "3" "Atom" off \
+    "4" "Google Chrome" off \
+    "5" "Tomahawk Player" off 2> $INSTALL
 
     while read choice
     do
@@ -91,10 +195,12 @@ function installProgramms() {
         ;;
         3) Chrome
         ;;
-        *) break
+        4) Tomahawk
+        ;;
+        *)
         ;;
     esac
-    done < $OUTPUT
+    done < $INSTALL
 }
 
 function showLog() {
@@ -105,9 +211,9 @@ function showLog() {
 function autoClean() {
    display_progress 6 40 "Executando Limpeza automática" 0
    sleep 1
-   apt-get clean -y &> $LOG
+   sudo apt-get clean -y &> $LOG
    display_progress 6 40 "Executando Limpeza automática" 30
-   apt-get autoremove -y &> $LOG
+   sudo apt-get autoremove -y &> $LOG
    display_progress 6 40 "Executando Limpeza automática" 50
    sudo apt-get autoclean -y &> $LOG
    display_progress 6 40 "Executando Limpeza automática" 80
@@ -131,8 +237,10 @@ dialog --clear --backtitle "Adriano Righi Auto Installer Script" \
 --title "[ M E N U ]" \
 --menu "Selecione uma opção\n
 \n
+Sua distribuição: $(lsb_release -sc)
+\n
 adrianorighi.com" 15 50 4 \
-Installers "Installers" \
+Installers "Instalar Aplicações" \
 AutoClean "Clean de system" \
 ShowLog "Show the log" \
 Exit "Exit to the shell" 2>"${INPUT}"
